@@ -33,7 +33,7 @@ resource "aws_security_group" "web" {
   name        = "web"
   description = "Allow HTTP/HTTPS in. Allow everything out."
 
-  vpc_id = data.aws_vpc.default
+  vpc_id = data.aws_vpc.default.id
 }
 
 resource "aws_security_group_rule" "web_http_in" {
