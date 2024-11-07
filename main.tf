@@ -24,40 +24,55 @@ module "web_vpc" {
   name = "dev"
   cidr = "10.0.0.0/16"
 
-  azs             = ["sa-east-1a", "sa-east-1b", "sa-east-1c"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  azs            = ["sa-east-1a", "sa-east-1b", "sa-east-1c"]
+  public_subnets = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 
   tags = {
-    Terraform = "true"
+    Terraform   = "true"
     Environment = "dev"
   }
 }
 
-resource "aws_instance" "web" {
-  ami                    = data.aws_ami.app_ami.id
-  instance_type          = var.instance_type
-  vpc_security_group_ids = [module.web_sg.security_group_id]
+module "autoscaling" {
+  source  = "terraform-aws-modules/autoscaling/aws"
+  version = "8.0.0"
+  name    = "web"
 
-  subnet_id = module.web_vpc.public_subnets[0]
+  min_size            = 1
+  max_size            = 2
+  desired_capacity    = 1
+  health_check_type   = "EC2"
+  vpc_zone_identifier = module.web_vpc.public_subnets
 
-  tags = {
-    Name = "HelloWorld"
-  }
+  # create_iam_instance_profile = false
+  # launch_template_name        = "web-asg"
+  # launch_template_description = "Launch template for web"
+  image_id      = data.aws_ami.app_ami.id
+  instance_type = var.instance_type
+
+
+  security_groups = [module.web_sg.security_group_id]
+}
+
+# Create a new ALB Target Group attachment
+resource "aws_autoscaling_attachment" "web-aat" {
+  autoscaling_group_name = module.alb.target_groups.ex-instance.name
+  lb_target_group_arn    = module.alb.target_groups.ex-instance.arn
 }
 
 module "alb" {
   source = "terraform-aws-modules/alb/aws"
 
-  name    = "web-alb"
-  vpc_id  = module.web_vpc.vpc_id
-  subnets = module.web_vpc.public_subnets
+  name            = "web-alb"
+  vpc_id          = module.web_vpc.vpc_id
+  subnets         = module.web_vpc.public_subnets
   security_groups = module.web_sg.security_group_id
 
   listeners = {
     ex-http-https-redirect = {
       port     = 80
       protocol = "HTTP"
-      forward  = {
+      forward = {
         target_group_key = "ex-instance"
       }
     }
@@ -65,11 +80,12 @@ module "alb" {
 
   target_groups = {
     ex-instance = {
-      name_prefix      = "web"
-      protocol         = "HTTP"
-      port             = 80
-      target_type      = "instance"
-      target_id        = aws_instance.web.id
+      name        = "web-instances"
+      name_prefix = "web"
+      protocol    = "HTTP"
+      port        = 80
+      target_type = "instance"
+      target_id   = aws_instance.web.id
     }
   }
 
