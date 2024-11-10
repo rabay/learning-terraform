@@ -47,11 +47,11 @@ module "autoscaling" {
   security_groups = [module.web_sg.security_group_id]
 }
 
-# Create a new ALB Target Group attachment
-resource "aws_autoscaling_attachment" "web-aat" {
-  autoscaling_group_name = module.alb.target_groups.ex-instance.name
-  lb_target_group_arn    = module.alb.target_groups.ex-instance.arn
-}
+# # Create a new ALB Target Group attachment
+# resource "aws_autoscaling_attachment" "web-aat" {
+#   autoscaling_group_name = module.alb.target_groups.ex-instance.name
+#   lb_target_group_arn    = module.alb.target_groups.ex-instance.arn
+# }
 
 module "alb" {
   source = "terraform-aws-modules/alb/aws"
