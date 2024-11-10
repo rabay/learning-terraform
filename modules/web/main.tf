@@ -32,8 +32,8 @@ module "web_vpc" {
 module "autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "8.0.0"
-  name    = "${var.environment.name}-web-asg"
-
+  
+  name                = "${var.environment.name}-web-asg"
   min_size            = var.asg_min_size
   max_size            = var.asg_max_size
   desired_capacity    = 1
@@ -43,47 +43,49 @@ module "autoscaling" {
   image_id      = data.aws_ami.app_ami.id
   instance_type = var.instance_type
 
-
   security_groups = [module.web_sg.security_group_id]
 }
 
-# # Create a new ALB Target Group attachment
-resource "aws_autoscaling_attachment" "web-aat" {
-  autoscaling_group_name = module.autoscaling.this_autoscaling_group_name
-  lb_target_group_arn    = module.alb.target_groups.ex-instance.arn
-}
 
 module "alb" {
-  source = "terraform-aws-modules/alb/aws"
+  source  = "terraform-aws-modules/alb/aws"
+  version = "8.0.0"
 
-  name            = "${var.environment.name}-web-alb"
-  vpc_id          = module.web_vpc.vpc_id
-  subnets         = module.web_vpc.public_subnets
-  security_groups = module.web_sg.security_group_id
+  name               = "${var.environment.name}-web-alb"
+  load_balancer_type = "application"
+  vpc_id             = module.web_vpc.vpc_id
+  subnets            = module.web_vpc.public_subnets
+  security_groups    = [module.web_sg.security_group_id]
 
-  listeners = {
-    ex-http-https-redirect = {
-      port     = 80
-      protocol = "HTTP"
-      forward = {
-        target_group_key = "ex-instance"
-      }
+  http_tcp_listeners = [
+    {
+      port               = 80
+      protocol           = "HTTP"
+      target_group_index = 0
     }
-  }
+  ]
 
-  target_groups = {
-    ex-instance = {
-      name_prefix = "${var.environment.name}"
-      protocol    = "HTTP"
-      port        = 80
-      target_type = "instance"
+  target_groups = [
+    {
+      name_prefix        = "${var.environment.name}-tg"
+      backend_protocol   = "HTTP"
+      backend_port       = 80
+      target_type        = "instance"
+      health_check_path  = "/"
+      health_check_port  = "traffic-port"
+      health_check_protocol = "HTTP"
     }
-  }
+  ]
 
   tags = {
     Environment = var.environment.name
     Project     = "Web"
   }
+}
+
+resource "aws_autoscaling_attachment" "web_tg_attachment" {
+  autoscaling_group_name = module.autoscaling.autoscaling_group_id
+  lb_target_group_arn    = module.alb.target_group_arns[0]
 }
 
 module "web_sg" {
