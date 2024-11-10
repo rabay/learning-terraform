@@ -14,10 +14,6 @@ data "aws_ami" "app_ami" {
   owners = [var.ami_filter.owner] # Bitnami
 }
 
-# data "aws_vpc" "default" {
-#   default = true
-# }
-
 module "web_vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
@@ -44,9 +40,6 @@ module "autoscaling" {
   health_check_type   = "EC2"
   vpc_zone_identifier = module.web_vpc.public_subnets
 
-  # create_iam_instance_profile = false
-  # launch_template_name        = "web-asg"
-  # launch_template_description = "Launch template for web"
   image_id      = data.aws_ami.app_ami.id
   instance_type = var.instance_type
 
@@ -80,8 +73,7 @@ module "alb" {
 
   target_groups = {
     ex-instance = {
-      name        = "web-instances"
-      name_prefix = "web"
+      name_prefix = "${var.environment.name}-web"
       protocol    = "HTTP"
       port        = 80
       target_type = "instance"
