@@ -48,10 +48,10 @@ module "autoscaling" {
 }
 
 # # Create a new ALB Target Group attachment
-# resource "aws_autoscaling_attachment" "web-aat" {
-#   autoscaling_group_name = module.alb.target_groups.ex-instance.name
-#   lb_target_group_arn    = module.alb.target_groups.ex-instance.arn
-# }
+resource "aws_autoscaling_attachment" "web-aat" {
+  autoscaling_group_name = module.autoscaling.this_autoscaling_group_name
+  lb_target_group_arn    = module.alb.target_groups.ex-instance.arn
+}
 
 module "alb" {
   source = "terraform-aws-modules/alb/aws"
