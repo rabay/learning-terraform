@@ -3,7 +3,7 @@ module "qa" {
 
     environment = {
         name           = "qa"
-        network_prefix = "10.1"
+        network_prefix = "10.2"
     }
 
     asg_min_size = 1
