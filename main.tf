@@ -11,7 +11,7 @@ data "aws_ami" "app_ami" {
     values = ["hvm"]
   }
 
-  owners = [var.ami_filter.name] # Bitnami
+  owners = [var.ami_filter.owner] # Bitnami
 }
 
 # data "aws_vpc" "default" {
@@ -80,7 +80,7 @@ module "alb" {
 
   target_groups = {
     ex-instance = {
-      name        = "ex-instance"
+      name        = "web-instances"
       name_prefix = "web"
       protocol    = "HTTP"
       port        = 80
